@@ -1,0 +1,10 @@
+listing_id,bedrooms,bathrooms,square_feet,year_built,neighborhood,price
+H001,3,2,1450,1998,Riverside,"$285,000"
+H002,4,2.5," 2100 ",2005,riverside,410000
+H003,2,,980,1985,Oak Park,"$199,500"
+H004,3,1,1200,not available,Oak Park,245000
+H005,5,3,3200,2015,LAKE VIEW,"$725,000"
+H006,3,2,1500,2001,Lake View,missing
+H007,4,2,2300,2010,Riverside,"$455,000"
+H008,3,2,1450,1998,Riverside,"$285,000"
+H009,2,1,850,1975,,175000

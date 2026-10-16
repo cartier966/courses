@@ -1,0 +1,14 @@
+[project]
+name = "my-python-project"
+version = "0.1.0"
+description = "A starter Python project"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "Your Name" }]
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["my_python_project"]

@@ -1,0 +1,11 @@
+customer_id,age,monthly_spend,contract,city,has_support,months_active,churned
+C001,25,49.99,Month-to-month,New York,Yes,3,Yes
+C002,34," 79.50 ",annual,Los Angeles,No,24,No
+C003,,65.00,month to month,Chicago,yes,8,No
+C004,45,N/A,Annual,New York,No,18,No
+C005,29,120.00,Monthly,los angeles,YES,5,Yes
+C006,52,89.99,annual,,No,36,No
+C007,41,invalid,Month-to-month,Chicago,No,2,Yes
+C008,38,75.50,Annual,New York,yes,12,No
+C008,38,75.50,Annual,New York,yes,12,No
+C009,27,55,month-to-month,Chicago,No,,Yes

@@ -1,0 +1,10 @@
+student_id,study_hours,attendance_percent,practice_tests,subject,passed,final_score
+S001,5,92,3,Math,Yes,88
+S002," 2 ",85%,1,math,yes,72
+S003,,78,0,Science,No,48
+S004,8,101,5,Science,YES,97
+S005,three,90,2,English,No,59
+S006,6,,4,english,Yes,81
+S007,4,88,2,Math,yes,74
+S008,4,88,2,Math,yes,74
+S009,1,65%,none,Science,no,35
