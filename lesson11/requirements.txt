@@ -1,0 +1,5 @@
+chromadb
+ipykernel
+jupyterlab
+matplotlib
+numpy
