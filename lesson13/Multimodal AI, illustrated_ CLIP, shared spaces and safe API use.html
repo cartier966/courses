@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Multimodal AI, illustrated: CLIP, shared spaces and safe API use</title>
+<style>
+:root{--bg:#eef2fb;--card:#fff;--fg:#16213e;--mut:#5a6785;--line:#d5dcee;--b:#2f5bea;--o:#e8890c;--p:#d6336c;--t:#0b8f7e;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0d1326;--card:#161e38;--fg:#e8ecfa;--mut:#9aa6c8;--line:#2a3560;--b:#7c9bff;--o:#ffb340;--p:#ff7aa8;--t:#3fd6c0;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0d1326;--card:#161e38;--fg:#e8ecfa;--mut:#9aa6c8;--line:#2a3560;--b:#7c9bff;--o:#ffb340;--p:#ff7aa8;--t:#3fd6c0;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:17px/1.65 "Segoe UI",system-ui,sans-serif}
+h1,h2,h3{font-family:"Palatino Linotype","Book Antiqua",Georgia,serif;line-height:1.15;margin:0 0 8px}
+h1{font-size:clamp(34px,7vw,58px);letter-spacing:-.02em}h2{font-size:clamp(25px,4.5vw,34px)}h3{font-size:19px}
+main{max-width:940px;margin:0 auto;padding:16px 16px 70px}
+p{margin:6px 0 12px;max-width:66ch}.mut{color:var(--mut)}section{margin:46px 0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;align-items:start}
+button{font:600 14px "Segoe UI",system-ui,sans-serif;border:1px solid var(--line);background:var(--card);color:var(--fg);padding:8px 13px;border-radius:99px;cursor:pointer}
+button:hover{border-color:var(--b)}button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid var(--b);outline-offset:2px}
+button.on{background:var(--b);color:var(--bg);border-color:var(--b)}
+input[type=range]{width:100%;accent-color:var(--b)}
+input[type=text],input[type=number],textarea{width:100%;font:16px "Segoe UI",system-ui,sans-serif;padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--fg)}
+svg{width:100%;height:auto;display:block}svg text{fill:var(--fg);font:12px "Segoe UI",system-ui,sans-serif}
+.call{border-left:5px solid var(--o);background:var(--card);padding:11px 15px;border-radius:0 12px 12px 0;margin:14px 0}
+.stat{font:700 28px "Palatino Linotype",Georgia,serif;color:var(--b)}
+pre{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:14px;overflow-x:auto;font-size:13.5px;line-height:1.55;margin:8px 0}
+code{font-family:ui-monospace,Menlo,Consolas,monospace}
+.bar{height:10px;border-radius:6px;background:var(--b)}
+.res{display:flex;gap:10px;align-items:center;padding:9px 12px;border:1px solid var(--line);border-radius:12px;margin:6px 0;background:var(--card);transition:all .3s}
+.res.hit{border-color:var(--t);box-shadow:0 0 0 3px color-mix(in srgb,var(--t) 28%,transparent)}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+.stage{flex:1 1 120px;text-align:center;padding:10px 6px;border:2px solid var(--line);border-radius:14px;font-size:14px;transition:all .3s;background:var(--card)}
+.stage.on{border-color:var(--o);transform:translateY(-4px);box-shadow:0 6px 16px color-mix(in srgb,var(--o) 30%,transparent)}.stage .ic{font-size:26px;display:block}
+.big{font-size:34px;line-height:1}
+table.m{border-collapse:separate;border-spacing:4px;width:100%;text-align:center}table.m td,table.m th{padding:9px 4px;border-radius:8px;font:600 13px ui-monospace,Menlo,monospace}
+.ok{color:var(--t)}.no{color:var(--p)}
+dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px 18px;margin:0}dt{font-weight:700}dd{margin:0 0 4px;color:var(--mut)}
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.g{transition:transform 1.5s cubic-bezier(.2,.8,.2,1)}.lb{transition:opacity 1s}
+.ck{display:flex;gap:10px;align-items:flex-start;padding:7px 0;cursor:pointer}.ck input{width:20px;height:20px;margin-top:4px;accent-color:var(--t)}
+@media (prefers-reduced-motion:reduce){.g,.lb,.res,.stage{transition:none}}
+</style>
+</head>
+<body>
+<main>
+<div class="top"><span class="mut">AI &amp; ML Level 2 · Multimodal AI</span><button id="theme">Toggle theme</button></div>
+
+<header>
+<h1>Multimodal AI, illustrated</h1>
+<p class="mut" style="font-size:20px">How one model can match the words “golden retriever in a park” to an actual photo, and how to wire it up to an API without leaking your key. Press the button to watch two separate worlds merge.</p>
+<div class="card"><svg id="hero" viewBox="0 0 640 330" role="img" aria-label="Text and images moving from separate rooms into one shared space"></svg>
+<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap"><button id="hbtn" class="on">Separate the rooms</button><span id="hcap" class="mut"></span></div></div>
+<div class="call"><b>The big idea:</b> models like CLIP place words and pictures that mean the same thing close together in one <i>shared vector space</i>, so we can compare text with images by measuring distance.</div>
+</header>
+
+<section>
+<h2>1. What is multimodal AI?</h2>
+<p>A <b>modality</b> is a type of data. Multimodal AI works with more than one. Tap a modality.</p>
+<div class="card"><div class="chips" id="mb"></div><div id="md"></div></div>
+</section>
+
+<section>
+<h2>2. The problem: separate rooms</h2>
+<p>Text models turn words into embeddings. Image models turn pixels into visual features. Those two outputs live in different “rooms”, so the computer can’t tell that the phrase and the photo describe the same thing.</p>
+<div class="two"><div class="card"><b>Text model</b><p class="mut">“golden retriever in a park”</p><code>→ text embedding</code></div><div class="card"><b>Image model</b><p class="mut"><span class="big">🐕</span> photo of a dog in a park</p><code>→ image features</code></div></div>
+<div class="call">Different rooms, different coordinate systems. Multimodal models build a bridge: <b>one room both can enter</b>.</div>
+</section>
+
+<section>
+<h2>3. CLIP: learning by contrast</h2>
+<p>CLIP stands for <b>Contrastive Language-Image Pre-training</b>. It sees millions of image and caption pairs and learns two moves: <b>pull matching pairs together, push mismatched pairs apart</b>. Drag the slider to “train” and watch the similarity table sharpen.</p>
+<div class="card"><label>Training progress: <b id="tl"></b>%</label><input type="range" id="tr" min="0" max="100" value="0"><div class="scroll" style="overflow-x:auto"><table class="m" id="tt"></table></div><div class="stat" id="ts"></div><span class="mut">Average similarity of correct pairs (the diagonal)</span></div>
+<div class="call">Bright diagonal = each caption has found its own picture. Dim off-diagonal = wrong pairs pushed away. CLIP is a <b>translator between pixels and words</b>.</div>
+</section>
+
+<section>
+<h2>4. One map for everything</h2>
+<p>In a shared vector space the word “winter” isn’t inside the pixels of a snowy forest, yet the model puts them near each other because of the <i>visual meaning</i>. Pick a text query, or <b>click the map</b> to drop your own.</p>
+<div class="two"><div class="card"><svg id="sm" viewBox="0 0 360 330" role="img" aria-label="Shared space of images and text queries"></svg></div><div class="card"><div class="chips" id="sq"></div><div id="sl"></div></div></div>
+</section>
+
+<section>
+<h2>5. Context resolves ambiguity</h2>
+<p>Words with two meanings confuse text-only models. An image supplies context and tips the balance. Choose a word, then add an image clue.</p>
+<div class="card"><div class="chips" id="aw"></div><div class="chips" id="ac"></div><svg id="as" viewBox="0 0 640 230"></svg><p id="at" style="font-weight:600"></p></div>
+</section>
+
+<section>
+<h2>6. Multimodal search, end to end</h2>
+<p>Three ways to search: <b>text → image</b> (“red running shoe”), <b>image → text</b> (upload a photo, get descriptions), <b>image → image</b> (find similar products). Below is the final-project pipeline for text → image. Pick a query and press <b>Run</b>.</p>
+<div class="card"><div class="chips" id="pq"></div>
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin:12px 0" id="ps"></div>
+<button id="run" class="on">▶ Run the pipeline</button>
+<div id="pr" style="margin-top:12px"></div></div>
+<h3 style="margin-top:18px">What the vector database stores per image</h3>
+<div class="card"><pre id="pj"></pre><p class="mut">Each item has an image embedding, a text description, a unique ID, a category and a URI. The image itself stays at the URI; the database holds the vector and metadata.</p></div>
+</section>
+
+<section>
+<h2>7. The OpenAI API: a restaurant</h2>
+<p>An <b>API</b> lets your app talk to an AI model. Click through the order.</p>
+<div class="card"><div class="chips" id="ab"></div><div id="ad" style="min-height:64px"></div></div>
+</section>
+
+<section>
+<h2>8. Keep your API key secret</h2>
+<p>An API key is a credential. Treat it like a password or a credit card number.</p>
+<div class="two"><div class="card"><h3 class="no">Never</h3><p>✗ Hardcode a real key in a Python file<br>✗ Upload it to GitHub<br>✗ Print the full key to “test” it</p></div><div class="card"><h3 class="ok">Do</h3><p>✓ Put it in <code>.streamlit/secrets.toml</code><br>✓ Keep that file out of Git (<code>.gitignore</code>)<br>✓ Print only a masked version</p></div></div>
+<pre>.streamlit/secrets.toml
+OPENAI_API_KEY = "your_key_here"
+
+import streamlit as st
+api_key = st.secrets["OPENAI_API_KEY"]</pre>
+<div class="card"><h3>Try the mask (use a fake key only)</h3><input type="text" id="kk" value="sk-DEMO-1234567890-abcd" aria-label="Fake key">
+<p class="no" style="margin-bottom:2px">print(api_key) → <code id="kf"></code></p>
+<p class="ok">print(masked_key) → <code id="km"></code></p>
+<pre>masked_key = api_key[:4] + "..." + api_key[-4:]</pre><p class="mut">If a real key is ever exposed, revoke it in your provider’s dashboard and create a new one.</p></div>
+</section>
+
+<section>
+<h2>9. Tokens and cost</h2>
+<p>Embedding APIs bill by tokens. Estimate before you send lots of text. The page can only guess; in Python, <code>tiktoken</code> counts exactly.</p>
+<div class="card"><label>Sample text</label><textarea id="tx" rows="2">A snowy forest trail during a winter morning.</textarea>
+<div class="grid" style="margin-top:10px"><div><label>How many texts like this?</label><input type="number" id="nt" value="1000" min="1"></div><div><label>Price per 1M tokens ($)</label><input type="number" id="pp" value="0.02" step="0.01" min="0"></div></div>
+<div class="grid" style="margin-top:10px"><div><div class="stat" id="e1"></div><span class="mut">≈ tokens per text (rough guess)</span></div><div><div class="stat" id="e2"></div><span class="mut">total tokens</span></div><div><div class="stat" id="e3"></div><span class="mut">estimated cost</span></div></div>
+<pre id="cc"></pre></div>
+<pre>import tiktoken
+
+encoding = tiktoken.get_encoding("cl100k_base")
+tokens = encoding.encode("A snowy forest trail during a winter morning.")
+print(tokens, len(tokens))
+
+total_tokens = 5000
+price_per_million = 0.02
+print((total_tokens / 1_000_000) * price_per_million)   # 0.0001</pre>
+<div class="call">I checked OpenAI’s model page: <code>text-embedding-3-small</code> is listed at <b>$0.02 per 1M input tokens</b> (1536 dimensions by default). Prices change, so verify before you deploy.</div>
+</section>
+
+<section>
+<h2>Learning checklist</h2>
+<div class="card"><div class="bar" id="cb" style="width:0;background:var(--t);transition:width .4s"></div><p class="mut" id="cn" style="margin:6px 0"></p><div id="cl"></div></div>
+</section>
+
+<section>
+<h2>Glossary</h2>
+<dl>
+<div><dt>Modality</dt><dd>A type of data: text, image, audio, video.</dd></div>
+<div><dt>Multimodal AI</dt><dd>AI that works with more than one modality.</dd></div>
+<div><dt>CLIP</dt><dd>Contrastive Language-Image Pre-training: matches text and images.</dd></div>
+<div><dt>Shared vector space</dt><dd>A universal map where text and images can be compared.</dd></div>
+<div><dt>Query vector</dt><dd>Your search text turned into numbers.</dd></div>
+<div><dt>URI</dt><dd>An address (path or link) pointing to a file.</dd></div>
+<div><dt>API key</dt><dd>A secret credential for calling an API.</dd></div>
+<div><dt>Token</dt><dd>A small piece of text; the unit APIs bill by.</dd></div>
+</dl>
+<div class="call" style="margin-top:22px">New here? Start with the embeddings foundation in <a href="https://claude.ai/artifact/R37eTAmTpra5wfJTcM8Frh" style="color:var(--b)">Embeddings, Illustrated</a>.</div>
+</section>
+</main>
+<script>
+const $=s=>document.querySelector(s),esc=s=>s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+$("#theme").onclick=()=>{const r=document.documentElement,d=r.dataset.theme==="dark"||(!r.dataset.theme&&matchMedia("(prefers-color-scheme:dark)").matches);r.dataset.theme=d?"light":"dark"};
+const eu=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1]);
+function stepper(bs,ds,items,init){const set=i=>{document.querySelectorAll(bs+" button").forEach((b,k)=>b.classList.toggle("on",k==i));$(ds).innerHTML=`<h3>${items[i][0]} ${items[i][1]}</h3><p>${items[i][2]}</p>`};$(bs).innerHTML=items.map((it,i)=>`<button data-i="${i}">${it[0]} ${it[1]}</button>`).join("");$(bs).onclick=e=>{const b=e.target.closest("button");if(b)set(+b.dataset.i)};set(init)}
+// hero
+const HP=[["golden retriever in a park","🐕","var(--o)",[100,70],[400,80],[180,90]],["winter morning","❄️","var(--b)",[200,135],[520,140],[460,90]],["hot coffee","☕","var(--p)",[110,205],[430,210],[180,245]],["red running shoe","👟","var(--t)",[210,265],[540,270],[460,245]]];let sh=false;const hero=$("#hero");
+hero.innerHTML=`<rect class="lb" id="r1" x="20" y="15" width="270" height="300" rx="18" fill="var(--b)" fill-opacity=".08" stroke="var(--b)"/><rect class="lb" id="r2" x="350" y="15" width="270" height="300" rx="18" fill="var(--o)" fill-opacity=".08" stroke="var(--o)"/><text class="lb" id="l1" x="155" y="36" text-anchor="middle" style="font-weight:700">Text room</text><text class="lb" id="l2" x="485" y="36" text-anchor="middle" style="font-weight:700">Image room</text><ellipse class="lb" id="sp" cx="320" cy="168" rx="300" ry="150" fill="var(--t)" fill-opacity=".1" stroke="var(--t)" stroke-dasharray="6 4" style="opacity:0"/><text class="lb" id="l3" x="320" y="20" text-anchor="middle" style="font-weight:700;opacity:0">Shared vector space</text>`+
+HP.map((p,i)=>`<g class="g" id="t${i}"><circle r="6" fill="${p[2]}"/><text y="20" text-anchor="middle">${p[0]}</text></g><g class="g" id="i${i}"><circle r="17" fill="${p[2]}" fill-opacity=".2" stroke="${p[2]}"/><text y="8" text-anchor="middle" style="font-size:22px">${p[1]}</text></g>`).join("");
+function place(){HP.forEach((p,i)=>{const t=sh?[p[5][0]-30,p[5][1]]:p[3],m=sh?[p[5][0]+34,p[5][1]]:p[4];$("#t"+i).style.transform=`translate(${t[0]}px,${t[1]}px)`;$("#i"+i).style.transform=`translate(${m[0]}px,${m[1]}px)`});
+["r1","r2","l1","l2"].forEach(k=>$("#"+k).style.opacity=sh?0:1);["sp","l3"].forEach(k=>$("#"+k).style.opacity=sh?1:0);$("#hbtn").textContent=sh?"Separate the rooms":"Merge into a shared space";$("#hbtn").classList.toggle("on",sh);
+$("#hcap").textContent=sh?"CLIP: matching text and images end up side by side.":"Before CLIP: text and images live in separate rooms."}
+place();setTimeout(()=>{sh=true;place()},900);$("#hbtn").onclick=()=>{sh=!sh;place()};
+// modalities
+stepper("#mb","#md",[["📝","Text","Prompts, captions, product descriptions."],["🖼️","Image","Photos, drawings, diagrams, screenshots."],["🔊","Audio","Speech, music, environmental sounds."],["🎬","Video","Frames, motion, scenes, actions."]],0);
+// clip matrix
+const CT=["golden retriever in a park","snowy forest","hot coffee","red running shoe"],CI=["🐕","🌲","☕","👟"];let sd=5;const rn=()=>(sd=(sd*9301+49297)%233280)/233280;
+const R=CT.map(()=>CI.map(()=>.25+rn()*.5));
+function drawT(){const t=+$("#tr").value/100;$("#tl").textContent=Math.round(t*100);let dsum=0;
+$("#tt").innerHTML=`<tr><th></th>${CI.map(c=>`<th style="font-size:22px">${c}</th>`).join("")}</tr>`+CT.map((c,i)=>`<tr><th style="text-align:left;font-family:inherit">${c}</th>${CI.map((_,j)=>{const v=R[i][j]*(1-t)+(i==j?.93:.05)*t;if(i==j)dsum+=v;return `<td style="background:color-mix(in srgb,var(--${i==j?"t":"b"}) ${Math.round(v*100)}%,transparent)">${v.toFixed(2)}</td>`}).join("")}</tr>`).join("");$("#ts").textContent=(dsum/4).toFixed(2)}
+$("#tr").oninput=drawT;drawT();
+// shared map
+const SI=[["Snowy forest","🌲",1,8.5],["Heavy coat","🧥",1.5,2],["Hot coffee","☕",6,3],["Desert","🏜️",9.5,8.5]],SQ=[["Winter morning",1,6],["Hot summer day",9,6],["Cozy café morning",5.5,2.5]];let sqi=0,cust=null;
+const mx=x=>40+x*30,my=y=>290-y*26;
+$("#sq").innerHTML=SQ.map((q,i)=>`<button data-i="${i}">${q[0]}</button>`).join("");
+function drawS(){const q=cust||SQ[sqi];document.querySelectorAll("#sq button").forEach((b,i)=>b.classList.toggle("on",!cust&&i==sqi));
+const o=SI.map(s=>({s,d:eu([q[1],q[2]],[s[2],s[3]])})).sort((a,b)=>a.d-b.d);
+$("#sm").innerHTML=`<rect x="0" y="0" width="360" height="330" fill="transparent" id="bg"/><path d="M40 290H340M40 290V20" stroke="var(--mut)"/><text x="190" y="322" text-anchor="middle">Cold → Hot</text><text transform="translate(12 160) rotate(-90)" text-anchor="middle">Human-made → Nature</text>`+o.slice(0,2).map(x=>`<line x1="${mx(q[1])}" y1="${my(q[2])}" x2="${mx(x.s[2])}" y2="${my(x.s[3])}" stroke="var(--t)" stroke-width="2.5"/>`).join("")+SI.map(s=>`<g><circle cx="${mx(s[2])}" cy="${my(s[3])}" r="19" fill="var(--card)" stroke="var(--o)" stroke-width="2"/><text x="${mx(s[2])}" y="${my(s[3])+7}" text-anchor="middle" style="font-size:20px">${s[1]}</text></g>`).join("")+`<path d="M${mx(q[1])} ${my(q[2])-12}l4 9 9 1-7 6 2 9-8-5-8 5 2-9-7-6 9-1z" fill="var(--b)"/><text x="${mx(q[1])+12}" y="${my(q[2])-12}" style="font-weight:700">${esc(q[0])}</text>`;
+$("#sl").innerHTML=`<p>Closest images to <b>“${esc(q[0])}”</b>:</p>`+o.map((x,i)=>`<div class="res ${i<2?"hit":""}"><span class="big" style="font-size:24px">${x.s[1]}</span><span style="flex:1">${x.s[0]}</span><div class="bar" style="width:${Math.max(4,110-x.d*12)}px"></div><b>${x.d.toFixed(1)}</b></div>`).join("")+`<p class="mut">Smaller number = closer in meaning. The two nearest images are the search results.</p>`}
+$("#sq").onclick=e=>{const b=e.target.closest("button");if(b){sqi=+b.dataset.i;cust=null;drawS()}};
+$("#sm").onclick=e=>{const sv=$("#sm"),p=new DOMPoint(e.clientX,e.clientY).matrixTransform(sv.getScreenCTM().inverse());cust=["Your query",Math.min(10,Math.max(0,(p.x-40)/30)),Math.min(10,Math.max(0,(290-p.y)/26))];drawS()};drawS();
+// ambiguity
+const AM={Crane:{y:115,a:["Bird 🐦",150,"Construction machine 🏗️",490],c:[["🪶 Feathers, water, long neck",0,"A bird."],["🏗️ Steel, construction site, hook",1,"A construction machine."]]},Bark:{y:115,a:["Tree bark 🌳",150,"Dog sound 🐕",490],c:[["🌳 Tree texture",0,"The outer layer of a tree."],["🐕 Dog opening its mouth",1,"A dog’s sound or action."]]}};let aw="Crane",ac=-1;
+function drawA(){const w=AM[aw];$("#aw").innerHTML=Object.keys(AM).map(k=>`<button data-w="${k}" class="${k==aw?"on":""}">${k}</button>`).join("");
+$("#ac").innerHTML=`<button data-c="-1" class="${ac<0?"on":""}">No image</button>`+w.c.map((c,i)=>`<button data-c="${i}" class="${ac==i?"on":""}">${c[0]}</button>`).join("");
+const x=ac<0?320:(ac?490:150)*.85+320*.15,col=["var(--o)","var(--b)"];
+$("#as").innerHTML=[0,1].map(i=>`<circle cx="${w.a[i*2+1]}" cy="115" r="75" fill="${col[i]}" fill-opacity=".12" stroke="${col[i]}"/><text x="${w.a[i*2+1]}" y="215" text-anchor="middle" style="font-weight:700">${w.a[i*2]}</text>`).join("")+`<g style="transform:translate(${x}px,115px);transition:transform 1s"><circle r="14" fill="var(--p)"/><text y="-22" text-anchor="middle" style="font-weight:700">“${aw}”</text></g>`;
+$("#at").textContent=ac<0?"Text alone: the word sits in the middle, so the meaning is ambiguous.":"With this image: "+w.c[ac][2]}
+$("#aw").onclick=e=>{if(e.target.dataset.w){aw=e.target.dataset.w;ac=-1;drawA()}};$("#ac").onclick=e=>{if(e.target.dataset.c!==undefined){ac=+e.target.dataset.c;drawA()}};drawA();
+// pipeline
+const G=[["image1","snowy forest trail","winter","🌲"],["image2","red running shoe","sports","👟"],["image3","golden retriever in a park","animals","🐕"],["image4","hot cup of coffee","food","☕"],["image5","person in a heavy coat","winter","🧥"],["image6","desert landscape","travel","🏜️"]];
+const PS={"snowy forest trail":[.91,.05,.12,.1,.48,.18],"winter morning":[.78,.04,.08,.36,.74,.05],"red running shoe":[.05,.93,.08,.04,.12,.03],"golden retriever in a park":[.22,.06,.92,.03,.05,.1],"hot cup of coffee":[.04,.02,.03,.94,.1,.15]};let pq="winter morning";
+const ST=[["📝","Text prompt"],["🔌","Embedding model (API)"],["🧭","Query vector"],["🗄️","Vector database"],["🖼️","Image retrieval"],["✅","Relevant results"]];
+$("#ps").innerHTML=ST.map((s,i)=>`<div class="stage" id="s${i}"><span class="ic">${s[0]}</span>${s[1]}</div>`).join("");
+$("#pq").innerHTML=Object.keys(PS).map(q=>`<button data-q="${q}">${q}</button>`).join("");
+function showR(done){document.querySelectorAll("#pq button").forEach(b=>b.classList.toggle("on",b.dataset.q==pq));const o=G.map((g,i)=>({g,s:PS[pq][i]})).sort((a,b)=>b.s-a.s).slice(0,3);
+$("#pr").innerHTML=done?`<div class="grid">${o.map((x,i)=>`<div class="res ${i==0?"hit":""}" style="flex-direction:column;align-items:flex-start"><span class="big">${x.g[3]}</span><b>${x.g[1]}</b><div class="bar" style="width:${x.s*100}%"></div><span class="mut">similarity ${x.s.toFixed(2)} · ${x.g[2]}</span></div>`).join("")}</div><p class="mut">Scores are illustrative, not from a real model.</p>`:`<p class="mut">Query: “${pq}”. Press Run.</p>`;
+const t=o[0].g;$("#pj").textContent=JSON.stringify({id:t[0],description:t[1],uri:`./images/${t[1].replace(/ /g,"_")}.jpg`,category:t[2]},null,2)}
+function run(){let i=0;document.querySelectorAll(".stage").forEach(s=>s.classList.remove("on"));$("#pr").innerHTML="";const iv=setInterval(()=>{document.querySelectorAll(".stage").forEach((s,k)=>s.classList.toggle("on",k==i));if(i++==5){clearInterval(iv);showR(true)}},650)}
+$("#pq").onclick=e=>{if(e.target.dataset.q){pq=e.target.dataset.q;showR(false)}};$("#run").onclick=run;showR(false);
+// api
+stepper("#ab","#ad",[["🧑","Customer","Your Streamlit app places the order: “embed this text”."],["🤵","Waiter","The API carries the request to the kitchen and brings the answer back."],["👨‍🍳","Chef","The AI model does the work and produces the embedding."],["🍽️","Food","The response: a vector delivered back to your app."]],0);
+// key mask
+function mk(){const k=$("#kk").value;$("#kf").textContent=k||"(empty)";$("#km").textContent=k.length>=9?k.slice(0,4)+"..."+k.slice(-4):"(too short to mask safely)"}
+$("#kk").oninput=mk;mk();
+// cost
+const est=t=>(t.match(/\w+|[^\s\w]/g)||[]).reduce((s,w)=>s+Math.max(1,Math.ceil(w.length/6)),0);
+function cost(){const e=est($("#tx").value),n=+$("#nt").value||0,p=+$("#pp").value||0,tot=e*n,c=tot/1e6*p;$("#e1").textContent=e;$("#e2").textContent=tot.toLocaleString();$("#e3").textContent="$"+(c<.01?c.toFixed(6):c.toFixed(2));$("#cc").textContent=`total_tokens = ${tot}\nprice_per_million = ${p}\ncost = (total_tokens / 1_000_000) * price_per_million\nprint(cost)   # ${c.toPrecision(3)}`}
+["#tx","#nt","#pp"].forEach(s=>$(s).oninput=cost);cost();
+// checklist
+const CK=["I can explain what multimodal AI is.","I can explain how CLIP connects text and images.","I can describe a shared vector space.","I can explain how semantic distance works across images and text.","I can explain how multimodal AI resolves ambiguity.","I can diagram a text-to-image retrieval pipeline.","I can explain the role of the OpenAI API.","I can store an API key securely using Streamlit secrets.","I can mask a key for safe verification.","I can estimate token usage and embedding cost."];
+$("#cl").innerHTML=CK.map(c=>`<label class="ck"><input type="checkbox"><span>${c}</span></label>`).join("");
+$("#cl").onchange=()=>{const n=document.querySelectorAll("#cl input:checked").length;$("#cb").style.width=n*10+"%";$("#cn").textContent=n+" of 10"+(n==10?" · all done, nice work!":"")};$("#cl").onchange();
+</script>
+</body>
+</html>

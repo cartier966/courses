@@ -172,7 +172,8 @@ with tab1:
             height=280,
             width=280,
             drawing_mode="freedraw",
-            key="lesson9_canvas"
+            key="lesson9_canvas",
+            return_image_data=True
         )
 
         st.caption("Draw one digit from 0 to 9.")

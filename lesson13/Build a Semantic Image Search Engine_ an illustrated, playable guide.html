@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Build a Semantic Image Search Engine: an illustrated, playable guide</title>
+<style>
+:root{--bg:#eef2fb;--card:#fff;--fg:#16213e;--mut:#5a6785;--line:#d5dcee;--b:#2f5bea;--o:#e8890c;--p:#d6336c;--t:#0b8f7e;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0d1326;--card:#161e38;--fg:#e8ecfa;--mut:#9aa6c8;--line:#2a3560;--b:#7c9bff;--o:#ffb340;--p:#ff7aa8;--t:#3fd6c0;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0d1326;--card:#161e38;--fg:#e8ecfa;--mut:#9aa6c8;--line:#2a3560;--b:#7c9bff;--o:#ffb340;--p:#ff7aa8;--t:#3fd6c0;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:17px/1.65 "Segoe UI",system-ui,sans-serif}
+h1,h2,h3{font-family:"Palatino Linotype","Book Antiqua",Georgia,serif;line-height:1.15;margin:0 0 8px}
+h1{font-size:clamp(34px,7vw,58px);letter-spacing:-.02em}h2{font-size:clamp(25px,4.5vw,34px)}h3{font-size:19px}
+main{max-width:960px;margin:0 auto;padding:16px 16px 70px}
+p{margin:6px 0 12px;max-width:66ch}.mut{color:var(--mut)}section{margin:46px 0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;align-items:start}
+button{font:600 14px "Segoe UI",system-ui,sans-serif;border:1px solid var(--line);background:var(--card);color:var(--fg);padding:8px 13px;border-radius:99px;cursor:pointer}
+button:hover{border-color:var(--b)}button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:3px solid var(--b);outline-offset:2px}
+button.on{background:var(--b);color:var(--bg);border-color:var(--b)}
+input[type=range]{width:100%;accent-color:var(--b)}
+input[type=text],textarea,select{width:100%;font:16px "Segoe UI",system-ui,sans-serif;padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--fg)}
+.call{border-left:5px solid var(--o);background:var(--card);padding:11px 15px;border-radius:0 12px 12px 0;margin:14px 0}
+pre{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:14px;overflow-x:auto;font-size:13px;line-height:1.5;margin:8px 0;white-space:pre}
+code{font-family:ui-monospace,Menlo,Consolas,monospace}
+.bar{height:9px;border-radius:6px;background:var(--b)}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+.stage{flex:1 1 130px;text-align:center;padding:10px 6px;border:2px solid var(--line);border-radius:14px;font-size:14px;transition:all .3s;background:var(--card)}
+.stage.on{border-color:var(--o);transform:translateY(-4px);box-shadow:0 6px 16px color-mix(in srgb,var(--o) 30%,transparent)}.stage .ic{font-size:26px;display:block}
+.pk{font:600 14px ui-monospace,Menlo,monospace;background:var(--bg);border:1px dashed var(--o);border-radius:10px;padding:10px 12px;margin-top:12px;min-height:44px;overflow-x:auto}
+.app{display:flex;flex-wrap:wrap;border:2px solid var(--line);border-radius:14px;overflow:hidden}
+.side{flex:0 0 230px;flex-grow:1;background:var(--bg);padding:14px}.main2{flex:3 1 340px;background:var(--card);padding:14px}
+.rg{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px}
+.img{border:1px solid var(--line);border-radius:12px;padding:8px;text-align:center;background:var(--bg)}.img .em{font-size:46px;line-height:1.3;border-radius:8px;background:color-mix(in srgb,var(--b) 10%,transparent)}.img small{display:block;color:var(--mut);font-size:12px;line-height:1.3}
+.err{background:color-mix(in srgb,var(--p) 15%,transparent);border:1px solid var(--p);border-radius:10px;padding:10px 12px;margin:8px 0}
+.okb{background:color-mix(in srgb,var(--t) 15%,transparent);border:1px solid var(--t);border-radius:10px;padding:10px 12px;margin:8px 0}
+.inf{background:color-mix(in srgb,var(--b) 12%,transparent);border-radius:10px;padding:10px 12px;margin:8px 0}
+table{border-collapse:collapse;width:100%;font-size:14px}td,th{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left}tr.fl td{background:color-mix(in srgb,var(--o) 25%,transparent)}
+.ck{display:flex;gap:10px;align-items:flex-start;padding:6px 0;cursor:pointer}.ck input{width:20px;height:20px;margin-top:4px;accent-color:var(--t)}
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}.ok{color:var(--t)}.no{color:var(--p)}
+@media (prefers-reduced-motion:reduce){.stage{transition:none}}
+</style>
+</head>
+<body>
+<main>
+<div class="top"><span class="mut">AI &amp; ML Level 2 · Lesson 13</span><button id="theme">Toggle theme</button></div>
+<header>
+<h1>Build a semantic image search engine</h1>
+<p class="mut" style="font-size:20px">Type “feline” and get the cat photo, even though the word never appears in the filename. Watch the whole app run, then play with a working copy of it.</p>
+<div class="card"><div style="display:flex;gap:8px;flex-wrap:wrap" id="hs"></div><div class="pk" id="hp"></div><div style="margin-top:12px"><button id="hr" class="on">▶ Replay</button></div></div>
+<div class="call"><b>The big idea:</b> OpenAI embeddings + ChromaDB + image metadata + Streamlit = an app that searches pictures by <i>meaning</i>.</div>
+</header>
+
+<section>
+<h2>1. Five concepts, one app</h2>
+<div class="grid" id="cc"></div>
+</section>
+
+<section>
+<h2>2. The project folder (click a file)</h2>
+<p>Every file has one job. Click through them: the full <code>app.py</code> is in there too. Pay attention to the red one.</p>
+<div class="card"><div class="chips" id="fb"></div><div id="fd"></div></div>
+</section>
+
+<section>
+<h2>3. Where the image really lives</h2>
+<p>ChromaDB does <b>not</b> store the picture. It stores the searchable vector plus an address (URI) pointing to the file.</p>
+<div class="two"><div class="card"><h3>🗄️ ChromaDB record</h3>
+<table><tr><th>id</th><td><code>img_01</code></td></tr><tr><th>description</th><td>A cat sitting near a window</td></tr><tr><th>embedding</th><td id="rs" style="letter-spacing:2px"></td></tr><tr><th>metadata</th><td><code>{"uri": "./images/cat.jpg", "category": "animals"}</code></td></tr></table></div>
+<div class="card"><h3>💾 Your disk</h3><pre>images/\n  cat.jpg      ← the real pixels\n  raincoat.jpg\n  tree_growth.jpg</pre><p class="mut">The <code>uri</code> is the pointer. For this class project we embed the <i>description</i>; a true CLIP system would embed the image itself.</p></div></div>
+</section>
+
+<section>
+<h2>4. add() vs upsert()</h2>
+<p>Rebuilding your index and getting duplicate-ID trouble? Try both methods on the same ID.</p>
+<div class="card"><div class="two"><div><label>id</label><input type="text" id="ui" value="img_01"></div><div><label>description</label><input type="text" id="ud" value="A fluffy cat sleeping on a sofa"></div></div>
+<div class="chips"><button id="ba">collection.add()</button><button id="bu" class="on">collection.upsert()</button><button id="br">Reset</button></div><div id="um" class="inf"></div><table id="ut"></table>
+<p class="mut"><b>add()</b> is for brand-new IDs and won’t update an existing record. <b>upsert()</b> updates if the ID exists and inserts if it’s new, so use it when rebuilding.</p></div>
+</section>
+
+<section>
+<h2>5. The app: play with it</h2>
+<p>This is a working miniature of your Streamlit app, with a tiny built-in “embedding model” and ten stored images. Search anything, drag the sidebar slider, switch to keyword mode, or simulate an API failure.</p>
+<div class="card"><div class="chips" id="pq"></div>
+<div class="app"><div class="side"><b>Sidebar</b><p class="mut" style="margin:2px 0 8px;font-size:14px">Number of results: <b id="nv"></b></p><input type="range" id="nr" min="1" max="5" value="3">
+<label class="ck" style="margin-top:8px"><input type="checkbox" id="kw"><span>Keyword mode (filename match)</span></label>
+<label style="font-size:14px">Simulate failure</label><select id="fl"><option value="">None</option><option value="401">Invalid API key</option><option value="429">Rate limit</option><option value="to">Timeout</option><option value="ks">Missing secret</option></select></div>
+<div class="main2"><h3 style="margin:0">🔎 Semantic Image Search</h3><p class="mut" style="margin:2px 0 10px;font-size:14px">Describe what you want to see.</p>
+<div style="display:flex;gap:8px"><input type="text" id="qi" placeholder="Search for an image..." aria-label="Search"><button id="qb" class="on">Search</button></div><div id="qr" style="margin-top:8px"></div></div></div>
+<pre id="qc"></pre>
+<p class="mut">Our model only knows about 60 words, so unfamiliar queries return nothing. A real embedding model understands almost any text.</p></div>
+</section>
+
+<section>
+<h2>6. Catch API failures gracefully</h2>
+<p>Professional apps show a friendly message, not a crash. Use the failure menu above to see each one. Common causes: invalid key, rate limit, network timeout, missing secret, empty input.</p>
+<pre>try:
+    embedding = get_embedding(query)
+except Exception as e:
+    st.error("Could not generate embedding.")
+    st.write(e)
+    st.stop()   # don't query the database without a vector</pre>
+</section>
+
+<section>
+<h2>7. Leak check before you push</h2>
+<p>Paste code below (fake keys only!). This scanner flags likely hardcoded secrets, the mistake that gets keys stolen from GitHub.</p>
+<div class="card"><textarea id="lk" rows="5" aria-label="Code to check">client = OpenAI(api_key="sk-FAKE-EXAMPLE-0123456789")
+other = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])</textarea><div id="lr"></div></div>
+<h3 style="margin-top:20px">Deployment checklist</h3>
+<div class="card"><div class="bar" id="db" style="width:0;background:var(--t);transition:width .4s"></div><p class="mut" id="dn" style="margin:6px 0"></p><div id="dl"></div>
+<p class="mut">If a real key ever lands in a commit, revoke it in your provider’s dashboard and create a new one. Deleting the commit isn’t enough.</p></div>
+</section>
+
+<section>
+<h2>Independent work</h2>
+<div class="two"><div class="card"><h3>🧪 Semantic search stress test</h3><p>Add more images, search abstract terms like “growth” and “safety”, and study how embeddings link meaning to visual content.</p></div><div class="card"><h3>🚀 UI, cloud and security</h3><p>Add sidebar controls, polish the grid, document the app, push to GitHub, deploy on Streamlit Cloud and add secrets in Advanced Settings.</p></div></div>
+</section>
+
+<section>
+<h2>Learning checklist</h2>
+<div class="card"><div class="bar" id="cb" style="width:0;background:var(--t);transition:width .4s"></div><p class="mut" id="cn" style="margin:6px 0"></p><div id="cl"></div></div>
+<div class="call">Foundations: <a href="https://claude.ai/artifact/R37eTAmTpra5wfJTcM8Frh" style="color:var(--b)">Embeddings, Illustrated</a> · <a href="https://claude.ai/artifact/JScgGEuQWA5fXAmaDuDapP" style="color:var(--b)">Multimodal AI, Illustrated</a></div>
+</section>
+</main>
+<script>
+const $=s=>document.querySelector(s),esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+$("#theme").onclick=()=>{const r=document.documentElement,d=r.dataset.theme==="dark"||(!r.dataset.theme&&matchMedia("(prefers-color-scheme:dark)").matches);r.dataset.theme=d?"light":"dark"};
+// hero
+const ST=[["⌨️","User query","\"feline\""],["🔌","OpenAI Embedding API","client.embeddings.create(model=\"text-embedding-3-small\", input=\"feline\")"],["🧭","Query vector","[0.021, -0.314, 0.772, … 1536 numbers]"],["🗄️","ChromaDB search","collection.query(query_embeddings=[…], n_results=3)"],["🔗","Image URIs","./images/cat.jpg · ./images/dog.jpg · …"],["🖼️","Streamlit grid","st.columns(3) → 🐱 🐕 …"]];let iv;
+$("#hs").innerHTML=ST.map((s,i)=>`<div class="stage" id="h${i}"><span class="ic">${s[0]}</span>${s[1]}</div>`).join("");
+function hrun(){clearInterval(iv);let i=0;const f=()=>{document.querySelectorAll("#hs .stage").forEach((e,k)=>e.classList.toggle("on",k==i));$("#hp").textContent="Now carrying → "+ST[i][2]};f();iv=setInterval(()=>{i=(i+1)%6;f();if(i==5){clearInterval(iv)}},1300)}
+$("#hr").onclick=hrun;hrun();
+// concepts
+$("#cc").innerHTML=[["🖼️","Images","The app displays retrieved image files."],["✂️","Tokenization","The embedding model tokenizes the query internally."],["🧭","Embeddings","Query and stored descriptions become vectors."],["🗄️","Vector database","ChromaDB stores vectors, text, IDs and image metadata."],["🔀","Multimodal AI","Natural language searches visual content."],["🎛️","Streamlit","The interface users actually touch."]].map(c=>`<div class="card"><div style="font-size:30px">${c[0]}</div><b>${c[1]}</b><br><span class="mut">${c[2]}</span></div>`).join("");
+// files
+const APP=`import streamlit as st
+import chromadb
+from openai import OpenAI
+
+client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+db = chromadb.PersistentClient(path="./chroma_db")
+collection = db.get_or_create_collection(name="image_search")
+
+IMAGES = [
+    {"id": "img_01", "description": "A cat sitting near a window",
+     "uri": "./images/cat.jpg", "category": "animals"},
+    {"id": "img_02", "description": "A waterproof raincoat by the door",
+     "uri": "./images/raincoat.jpg", "category": "clothing"},
+]
+
+def get_embedding(text):
+    response = client.embeddings.create(
+        model="text-embedding-3-small",
+        input=text
+    )
+    return response.data[0].embedding
+
+if collection.count() == 0:
+    for img in IMAGES:
+        collection.upsert(
+            ids=[img["id"]],
+            documents=[img["description"]],
+            embeddings=[get_embedding(img["description"])],
+            metadatas=[{"uri": img["uri"], "category": img["category"]}],
+        )
+
+st.title("Semantic Image Search")
+st.write("Describe what you want to see.")
+n_results = st.sidebar.slider("Number of results", 1, 5, 3)
+query = st.chat_input("Search for an image...")
+
+if query:
+    try:
+        query_embedding = get_embedding(query)
+    except Exception as e:
+        st.error("Could not generate embedding.")
+        st.write(e)
+        st.stop()
+    results = collection.query(
+        query_embeddings=[query_embedding], n_results=n_results
+    )
+    cols = st.columns(3)
+    docs, metas = results["documents"][0], results["metadatas"][0]
+    for i, (doc, meta) in enumerate(zip(docs, metas)):
+        with cols[i % 3]:
+            st.image(meta["uri"], caption=doc, use_container_width=True)`;
+const FI=[["app.py",APP,"The whole app: key loading, get_embedding(), ChromaDB setup, search and grid. (Recent Streamlit versions may prefer a different image-width argument; check your version’s docs.)"],["requirements.txt","streamlit\nopenai\nchromadb","Tells Streamlit Cloud which packages to install."],[".streamlit/secrets.toml","OPENAI_API_KEY = \"your_key_here\"","🚫 NEVER commit this file. Locally it holds your key; in the cloud you paste the same line into Advanced Settings → Secrets."],[".gitignore",".streamlit/secrets.toml\nchroma_db/\n__pycache__/","Keeps secrets (and the local database) out of GitHub."],["images/","cat.jpg\nraincoat.jpg\ntree_growth.jpg","The real image files. Push them to GitHub so the deployed app can find them."]];let fi=0;
+function drawF(){$("#fb").innerHTML=FI.map((f,i)=>`<button data-i="${i}" class="${i==fi?"on":""}" style="${i==2&&i!=fi?"border-color:var(--p);color:var(--p)":""}">${f[0]}</button>`).join("");$("#fd").innerHTML=`<pre>${esc(FI[fi][1])}</pre><p class="${fi==2?"no":"mut"}">${FI[fi][2]}</p>`}
+$("#fb").onclick=e=>{if(e.target.dataset.i){fi=+e.target.dataset.i;drawF()}};drawF();
+$("#rs").innerHTML=[.8,.2,.9,.1,.6,.4,.7,.3].map(v=>`<span style="color:var(--b);opacity:${.2+v*.8}">█</span>`).join("")+" <span class='mut'>… 1536 numbers</span>";
+// add vs upsert
+let CO={img_01:"A cat sitting near a window"},fl="";const um=$("#um");
+function drawU(msg){um.textContent=msg||"Collection has 1 record. Try add() with img_01, then upsert().";$("#ut").innerHTML="<tr><th>id</th><th>document</th></tr>"+Object.entries(CO).map(([k,v])=>`<tr class="${k==fl?"fl":""}"><td><code>${esc(k)}</code></td><td>${esc(v)}</td></tr>`).join("")}
+function doU(up){const i=$("#ui").value.trim(),d=$("#ud").value.trim();if(!i||!d){drawU("Both an ID and a description are required.");return}fl=i;
+if(i in CO){if(up){CO[i]=d;drawU(`upsert(): ID ${i} existed, so it was updated.`)}else{fl="";drawU(`add(): ID ${i} already exists, so nothing was changed. Use upsert() to update.`)}}else{CO[i]=d;drawU(`${up?"upsert()":"add()"}: new ID ${i}, so it was inserted.`)}}
+$("#ba").onclick=()=>doU(0);$("#bu").onclick=()=>doU(1);$("#br").onclick=()=>{CO={img_01:"A cat sitting near a window"};fl="";drawU()};drawU();
+// tiny embedding model
+const L="apwcsftv",LX={};Object.entries({cat:"a9",feline:"a9",kitten:"a9",dog:"a9",pet:"a8",animal:"a9",raincoat:"w8c9s2",waterproof:"w8c4s3",outerwear:"c9w3",rain:"w9",jacket:"c9",coat:"c9w2",umbrella:"w8s2",tree:"p9",plant:"p9",seedling:"p9",forest:"p8",flower:"p8",growth:"p9",growing:"p9",grow:"p9",garden:"p8",leaf:"p9",helmet:"s9",safety:"s10",seatbelt:"s9",protection:"s9",construction:"s4t2",vest:"s8c3",warning:"s7",pizza:"f10",food:"f10",meal:"f9",pasta:"f9",oven:"f6",laptop:"t10",computer:"t10",code:"t8",robot:"t8",airplane:"v10",train:"v9",travel:"v10",beach:"v8w3",mountain:"v7p4",flight:"v9"}).forEach(([k,s])=>{const v=Array(8).fill(0);s.replace(/([a-z])(\d+)/g,(m,l,n)=>{v[L.indexOf(l)]=n/10});LX[k]=v});
+const emb=t=>{const k=(t.toLowerCase().match(/[a-z]+/g)||[]).filter(w=>LX[w]),v=Array(8).fill(0);k.forEach(w=>LX[w].forEach((x,i)=>v[i]+=x/k.length));return v};
+const mg=a=>Math.hypot(...a),cs=(a,b)=>mg(a)&&mg(b)?a.reduce((s,x,i)=>s+x*b[i],0)/(mg(a)*mg(b)):0;
+const IM=[["🐱","A cat sitting near a window","cat.jpg"],["🧥","A waterproof raincoat hanging by the door","raincoat.jpg"],["🌱","A seedling growing into a tree","tree_growth.jpg"],["⛑️","A safety helmet on a construction site","helmet.jpg"],["🍕","A pizza fresh from the oven","pizza.jpg"],["💻","A laptop with code on the screen","laptop.jpg"],["✈️","An airplane flight over the city","airplane.jpg"],["🐕","A dog running in the park","dog.jpg"],["☔","An umbrella in the rain","umbrella.jpg"],["🦺","A reflective safety vest on a worker","vest.jpg"]].map(x=>({e:x[0],d:x[1],f:x[2],v:emb(x[1])}));
+const TEST={"feline":"cat.jpg","waterproof outerwear":"raincoat.jpg","growth":"tree_growth.jpg"},ERR={"401":["Error code: 401 - Incorrect API key provided: sk-D...abcd."],"429":["Error code: 429 - Rate limit reached. Please wait and retry."],to:["APITimeoutError: Request timed out."],ks:["KeyError: 'OPENAI_API_KEY' (add it to secrets.toml)"]};
+const PQ=["feline","waterproof outerwear","growth","safety","pizza"];$("#pq").innerHTML=PQ.map(q=>`<button data-q="${q}">${q}</button>`).join("");
+function srch(){const q=$("#qi").value.trim(),n=+$("#nr").value,kw=$("#kw").checked,f=$("#fl").value;$("#nv").textContent=n;
+$("#qc").textContent=`results = collection.query(\n    query_embeddings=[get_embedding(${JSON.stringify(q)})],\n    n_results=${n}\n)`;
+let h="";if(!q){$("#qr").innerHTML=`<div class="inf">Type a query to search.</div>`;return}
+if(f){$("#qr").innerHTML=`<div class="err"><b>Could not generate embedding.</b><br><code>${esc(ERR[f][0])}</code></div>`;return}
+let r;if(kw){const w=q.toLowerCase().split(/\s+/);r=IM.filter(m=>w.some(x=>m.f.includes(x))).slice(0,n).map(m=>({m,s:1}));h+=`<div class="inf">Keyword mode: matches words in <b>filenames</b> only.</div>`}
+else{const qv=emb(q);if(!mg(qv)){$("#qr").innerHTML=`<div class="inf">None of these words are in our tiny vocabulary. Try one of the presets.</div>`;return}r=IM.map(m=>({m,s:cs(qv,m.v)})).sort((a,b)=>b.s-a.s).slice(0,n)}
+if(!r.length)h+=`<div class="err">No filename matches. Zero results: this is the keyword trap.</div>`;
+else{h+=`<div class="rg">${r.map((x,i)=>`<div class="img"><div class="em">${x.m.e}</div><small>${esc(x.m.d)}</small><div class="bar" style="width:${Math.max(4,x.s*100)}%;margin:5px 0 2px;${i?"opacity:.5":""}"></div><small><code>./images/${x.m.f}</code> · ${x.s.toFixed(2)}</small></div>`).join("")}</div>`;
+const t=TEST[q.toLowerCase()];if(t&&!kw)h+=`<div class="okb">✓ <b>Semantic search is working:</b> “${esc(q)}” returned <code>${r[0].m.f}</code> (expected <code>${t}</code>), though the word isn’t in the filename.</div>`}
+$("#qr").innerHTML=h}
+$("#pq").onclick=e=>{if(e.target.dataset.q){$("#qi").value=e.target.dataset.q;srch()}};$("#qb").onclick=srch;$("#qi").onkeydown=e=>{if(e.key=="Enter")srch()};["#nr","#kw","#fl"].forEach(s=>$(s).oninput=srch);$("#qi").value="feline";srch();
+// leak check
+function leak(){const ls=$("#lk").value.split("\n"),b=[];ls.forEach((l,i)=>{if(l.includes("st.secrets")||l.includes("os.environ"))return;if(/sk-[A-Za-z0-9_\-]{8,}/.test(l)||/(api[_-]?key|secret|token|password)\s*=\s*["'][^"']{6,}["']/i.test(l))b.push(i+1)});
+$("#lr").innerHTML=b.length?`<div class="err">⚠ Possible hardcoded secret on line${b.length>1?"s":""} ${b.join(", ")}. Move it to <code>st.secrets</code> and add <code>secrets.toml</code> to <code>.gitignore</code>.</div>`:`<div class="okb">✓ No hardcoded keys found. (This is a simple check, not a guarantee.)</div>`}
+$("#lk").oninput=leak;leak();
+// checklists
+function mkList(id,items,bar,note,w){$(id).innerHTML=items.map(c=>`<label class="ck"><input type="checkbox"><span>${c}</span></label>`).join("");$(id).onchange=()=>{const n=document.querySelectorAll(id+" input:checked").length;$(bar).style.width=n*w+"%";$(note).textContent=n+" of "+items.length+(n==items.length?" · all done!":"")};$(id).onchange()}
+mkList("#dl",["Create requirements.txt","Push code and image assets to GitHub","Confirm no API keys are committed","Add secrets in Streamlit Cloud → Advanced Settings","Test the public URL"],"#db","#dn",20);
+mkList("#cl",["I can call the OpenAI Embedding API from Python.","I can write a reusable get_embedding() function.","I can securely access an API key using st.secrets.","I can create a ChromaDB collection.","I can upsert image records with IDs, descriptions, embeddings and URIs.","I can query ChromaDB using a semantic text query.","I can display returned image results in Streamlit.","I can build a sidebar control panel.","I can explain semantic search vs. keyword search.","I can deploy securely without leaking API keys."],"#cb","#cn",10);
+</script>
+</body>
+</html>
