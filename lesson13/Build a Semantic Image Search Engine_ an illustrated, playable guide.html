@@ -107,7 +107,7 @@ except Exception as e:
 <section>
 <h2>7. Leak check before you push</h2>
 <p>Paste code below (fake keys only!). This scanner flags likely hardcoded secrets, the mistake that gets keys stolen from GitHub.</p>
-<div class="card"><textarea id="lk" rows="5" aria-label="Code to check">client = OpenAI(api_key="sk-FAKE-EXAMPLE-0123456789")
+<div class="card"><textarea id="lk" rows="5" aria-label="Code to check">client = OpenAI(api_key="YOUR_API_KEY_HERE")
 other = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])</textarea><div id="lr"></div></div>
 <h3 style="margin-top:20px">Deployment checklist</h3>
 <div class="card"><div class="bar" id="db" style="width:0;background:var(--t);transition:width .4s"></div><p class="mut" id="dn" style="margin:6px 0"></p><div id="dl"></div>

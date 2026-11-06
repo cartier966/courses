@@ -113,7 +113,7 @@ OPENAI_API_KEY = "your_key_here"
 
 import streamlit as st
 api_key = st.secrets["OPENAI_API_KEY"]</pre>
-<div class="card"><h3>Try the mask (use a fake key only)</h3><input type="text" id="kk" value="sk-DEMO-1234567890-abcd" aria-label="Fake key">
+<div class="card"><h3>Try the mask (use a fake key only)</h3><input type="text" id="kk" value="YOUR_API_KEY_HERE" aria-label="Fake key">
 <p class="no" style="margin-bottom:2px">print(api_key) → <code id="kf"></code></p>
 <p class="ok">print(masked_key) → <code id="km"></code></p>
 <pre>masked_key = api_key[:4] + "..." + api_key[-4:]</pre><p class="mut">If a real key is ever exposed, revoke it in your provider’s dashboard and create a new one.</p></div>
