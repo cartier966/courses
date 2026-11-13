@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>RAG, illustrated: loading, cleaning and chunking documents</title>
+<style>
+:root{--bg:#eef2fb;--card:#fff;--fg:#16213e;--mut:#5a6785;--line:#d5dcee;--b:#2f5bea;--o:#e8890c;--p:#d6336c;--t:#0b8f7e;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0d1326;--card:#161e38;--fg:#e8ecfa;--mut:#9aa6c8;--line:#2a3560;--b:#7c9bff;--o:#ffb340;--p:#ff7aa8;--t:#3fd6c0;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0d1326;--card:#161e38;--fg:#e8ecfa;--mut:#9aa6c8;--line:#2a3560;--b:#7c9bff;--o:#ffb340;--p:#ff7aa8;--t:#3fd6c0;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:17px/1.65 "Segoe UI",system-ui,sans-serif}
+h1,h2,h3{font-family:"Palatino Linotype","Book Antiqua",Georgia,serif;line-height:1.15;margin:0 0 8px}
+h1{font-size:clamp(34px,7vw,58px);letter-spacing:-.02em}h2{font-size:clamp(25px,4.5vw,34px)}h3{font-size:19px}
+main{max-width:960px;margin:0 auto;padding:16px 16px 70px}
+p{margin:6px 0 12px;max-width:66ch}.mut{color:var(--mut)}section{margin:46px 0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;align-items:start}
+button{font:600 14px "Segoe UI",system-ui,sans-serif;border:1px solid var(--line);background:var(--card);color:var(--fg);padding:8px 13px;border-radius:99px;cursor:pointer}
+button:hover{border-color:var(--b)}button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:3px solid var(--b);outline-offset:2px}
+button.on{background:var(--b);color:var(--bg);border-color:var(--b)}
+input[type=range]{width:100%;accent-color:var(--b)}
+input[type=text],textarea,select{width:100%;font:15px "Segoe UI",system-ui,sans-serif;padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--fg)}
+textarea{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px}
+.call{border-left:5px solid var(--o);background:var(--card);padding:11px 15px;border-radius:0 12px 12px 0;margin:14px 0}
+pre{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px;overflow-x:auto;font-size:13px;line-height:1.5;margin:8px 0;white-space:pre-wrap;word-break:break-word}
+code{font-family:ui-monospace,Menlo,Consolas,monospace}
+.bar{height:9px;border-radius:6px;background:var(--b)}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+.stages{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0}
+.stage{flex:1 1 105px;text-align:center;padding:9px 5px;border:2px solid var(--line);border-radius:14px;font-size:13px;transition:all .3s;background:var(--card)}
+.stage.on{border-color:var(--o);transform:translateY(-4px);box-shadow:0 6px 16px color-mix(in srgb,var(--o) 30%,transparent)}.stage .ic{font-size:24px;display:block}
+.pk{font:600 13px ui-monospace,Menlo,monospace;background:var(--bg);border:1px dashed var(--o);border-radius:10px;padding:10px 12px;margin-top:10px;min-height:44px;overflow-x:auto}
+.err{background:color-mix(in srgb,var(--p) 15%,transparent);border:1px solid var(--p);border-radius:10px;padding:10px 12px;margin:8px 0}
+.okb{background:color-mix(in srgb,var(--t) 15%,transparent);border:1px solid var(--t);border-radius:10px;padding:10px 12px;margin:8px 0}
+.inf{background:color-mix(in srgb,var(--b) 12%,transparent);border-radius:10px;padding:10px 12px;margin:8px 0}
+.ch{border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin:6px 0;font-size:14px;white-space:pre-wrap;background:var(--card)}
+.ch.top{border-color:var(--t);box-shadow:0 0 0 3px color-mix(in srgb,var(--t) 25%,transparent)}.ch small{color:var(--mut);display:block;font-weight:600}
+mark{background:color-mix(in srgb,var(--o) 45%,transparent);color:inherit;border-radius:3px}
+.stat{font:700 26px "Palatino Linotype",Georgia,serif;color:var(--b)}
+table{border-collapse:collapse;width:100%;font-size:14px}td,th{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left}
+.ck{display:flex;gap:10px;align-items:flex-start;padding:5px 0;cursor:pointer;font-size:15px}.ck input{width:19px;height:19px;margin-top:3px;accent-color:var(--t)}
+.top2{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}.ok{color:var(--t)}.no{color:var(--p)}
+svg{width:100%;height:auto;display:block}
+@media (prefers-reduced-motion:reduce){.stage{transition:none}}
+</style>
+</head>
+<body>
+<main>
+<div class="top2"><span class="mut">AI &amp; ML Level 2 · Retrieval-Augmented Generation</span><button id="theme">Toggle theme</button></div>
+<header>
+<h1>RAG, illustrated</h1>
+<p class="mut" style="font-size:20px">How to make an AI answer from <i>your</i> documents instead of guessing: load them, clean them, chop them into smart chunks, then retrieve the right piece at question time.</p>
+<div class="card"><b>🏗️ Prepare once</b><div class="stages" id="h1"></div><b>💬 Answer every question</b><div class="stages" id="h2"></div><div class="pk" id="hp"></div><div style="margin-top:10px"><button id="hr" class="on">▶ Replay</button></div></div>
+<div class="call"><b>The big idea:</b> an LLM predicts text; it isn’t a perfect database. RAG hands it relevant evidence first, so it answers from sources instead of making things up.</div>
+</header>
+
+<section>
+<h2>1. Why RAG?</h2>
+<p>Ask a model about <i>your company’s</i> vacation policy and it has never seen it. Flip the switch.</p>
+<div class="card"><div class="chips" id="wb"><button data-m="0" class="on">Without RAG</button><button data-m="1">With RAG</button></div><div id="wd"></div></div>
+</section>
+
+<section>
+<h2>2. R, A, G: three moves</h2>
+<div class="card"><div class="chips" id="rb"></div><div id="rd" style="min-height:70px"></div></div>
+</section>
+
+<section>
+<h2>3. Mini RAG: ask your documents</h2>
+<p>Six stored chunks, a tiny built-in embedding model, and a simulated LLM. Ask something, change <code>top_k</code>, switch retrieval off, or ask something the documents don’t cover.</p>
+<div class="card"><div class="chips" id="mq"></div>
+<div style="display:flex;gap:8px"><input type="text" id="qi" aria-label="Question"><button id="qb" class="on">Ask</button></div>
+<div class="two" style="margin-top:8px"><label class="ck"><input type="checkbox" id="ur" checked><span>Use RAG (retrieve context first)</span></label><div><span class="mut" style="font-size:14px">top_k = <b id="kv"></b></span><input type="range" id="tk" min="1" max="3" value="1"></div></div>
+<div class="two"><div><h3>① Retrieval</h3><div id="m1"></div></div><div><h3>② Augmented prompt</h3><pre id="m2"></pre></div></div>
+<h3>③ Generation <span class="mut" style="font-size:14px">(simulated)</span></h3><div id="m3"></div></div>
+</section>
+
+<section>
+<h2>4. Loading documents</h2>
+<p>Loading brings outside information into the app: PDF, TXT, Markdown, Word documents, web pages. Try uploads, including a bad one.</p>
+<div class="two"><div class="card"><div class="chips" id="ub"><button data-f="0">📄 policy.txt</button><button data-f="1">📕 handbook.pdf</button><button data-f="2">🖼️ scan.pdf (images only)</button></div><div id="ud"><div class="inf">Choose a file.</div></div></div>
+<pre>import streamlit as st
+from doc_helper import load_document
+
+uploaded_file = st.file_uploader(
+    "Upload a PDF or text file",
+    type=["pdf", "txt"]
+)
+if uploaded_file is not None:
+    text = load_document(uploaded_file)
+    if not text.strip():
+        st.warning("No readable text found.")
+    else:
+        st.success("File uploaded successfully.")</pre></div>
+<div class="call">A <code>doc_helper</code> module keeps file-reading logic out of the Streamlit interface. If a PDF is scanned: use OCR, ask for a text-based version, use multimodal extraction, or warn the user.</div>
+</section>
+
+<section>
+<h2>5. Cleaning lab</h2>
+<p>Raw extracted text is messy: headers, page numbers, broken lines, odd spaces. Toggle each cleaning step and watch the text change. Hidden characters are made visible: <code>·</code> space, <code>→</code> tab, <code>⍽</code> non-breaking space, <code>␀</code> null, <code>↵</code> newline.</p>
+<div class="card"><div class="two"><div><b>Raw text (editable)</b><textarea id="cr" rows="9"></textarea></div><div><b>Cleaned</b><pre id="co" style="min-height:190px"></pre></div></div>
+<div id="cs" class="grid" style="margin-top:6px"></div><div id="cn"></div></div>
+<pre>def clean_text(text):
+    text = text.replace("\x00", "")
+    text = text.replace("\u00a0", " ")
+    text = re.sub(r"[ \t]+", " ", text)
+    text = re.sub(r"(?&lt;!\n)\n(?=[a-z])", " ", text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text.strip()</pre>
+<div class="call"><b>Don’t over-clean.</b> Punctuation, headings, list markers, dates and labels carry meaning. Turn on the red option to see what you lose.</div>
+<h3>Tables and lists: keep the labels</h3>
+<div class="card"><div class="chips" id="tb"><button data-m="0" class="on">Naive extraction</button><button data-m="1">Labels preserved</button></div><pre id="tt"></pre></div>
+</section>
+
+<section>
+<h2>6. Chunking lab</h2>
+<p>Chunking splits a long document into pieces that fit embedding and context limits. Small chunks retrieve precisely but lose context; large chunks keep context but pull in unrelated text. Pick a strategy and tune it.</p>
+<div class="card"><textarea id="ct" rows="7" aria-label="Document text"></textarea>
+<div class="chips" id="sb"></div>
+<div class="grid"><div><span class="mut" style="font-size:14px">Chunk size: <b id="zv"></b> chars</span><input type="range" id="zs" min="60" max="400" value="200" step="10"></div><div id="ow"><span class="mut" style="font-size:14px">Overlap: <b id="ov"></b> chars</span><input type="range" id="os" min="0" max="100" value="40" step="5"></div><div id="sw"><span class="mut" style="font-size:14px">Sentences per chunk: <b id="sv"></b></span><input type="range" id="ss" min="1" max="5" value="2"></div></div>
+<p id="sd" class="inf"></p>
+<svg id="rl" viewBox="0 0 600 66" role="img" aria-label="Chunk ranges across the document"></svg>
+<div class="grid" style="margin:8px 0"><div><div class="stat" id="n1"></div><span class="mut">chunks</span></div><div><div class="stat" id="n2"></div><span class="mut">average length</span></div><div><div class="stat" id="n3"></div><span class="mut">longest</span></div></div>
+<div id="cl"></div>
+<h3>Can retrieval find the answer?</h3><div class="chips" id="tq"></div><div id="tr"></div></div>
+<h3 style="margin-top:20px">Which strategy for which document?</h3>
+<div class="card"><div class="chips" id="gb"></div><div id="gd"></div></div>
+</section>
+
+<section>
+<h2>7. Chunk metadata: filters and citations</h2>
+<p>Each chunk travels with labels. They power filtering, source display and citations.</p>
+<div class="card"><div class="chips" id="mf"></div><div id="mr"></div><pre id="mj"></pre></div>
+</section>
+
+<section>
+<h2>8. The final project</h2>
+<div class="card"><div class="chips" id="fb"></div><div id="fd"></div></div>
+</section>
+
+<section>
+<h2>Independent work</h2>
+<div class="card"><label class="ck"><input type="checkbox"><span>Create the final-project folder, <code>app.py</code> and <code>data/</code></span></label><label class="ck"><input type="checkbox"><span>Add the title, caption and visual identity of the assistant</span></label><label class="ck"><input type="checkbox"><span>Gather 4–5 relevant documents</span></label><label class="ck"><input type="checkbox"><span>Clean and inspect each document</span></label><label class="ck"><input type="checkbox"><span>Chunk at least one document and explain your strategy</span></label></div>
+</section>
+
+<section>
+<h2>Learning checklist</h2>
+<div class="card"><div class="bar" id="cb" style="width:0;background:var(--t);transition:width .4s"></div><p class="mut" id="cnt" style="margin:6px 0"></p><div id="cc"></div></div>
+<div class="call">Earlier guides: <a href="https://claude.ai/artifact/R37eTAmTpra5wfJTcM8Frh" style="color:var(--b)">Embeddings</a> · <a href="https://claude.ai/artifact/JScgGEuQWA5fXAmaDuDapP" style="color:var(--b)">Multimodal AI</a> · <a href="https://claude.ai/artifact/Pv6puRTUGXMeveJPdkUxt4" style="color:var(--b)">Semantic image search</a></div>
+</section>
+</main>
+<script>
+const $=s=>document.querySelector(s),esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+$("#theme").onclick=()=>{const r=document.documentElement,d=r.dataset.theme==="dark"||(!r.dataset.theme&&matchMedia("(prefers-color-scheme:dark)").matches);r.dataset.theme=d?"light":"dark"};
+function stepper(bs,ds,items,init){const set=i=>{document.querySelectorAll(bs+" button").forEach((b,k)=>b.classList.toggle("on",k==i));$(ds).innerHTML=`<h3>${items[i][0]} ${items[i][1]}</h3><p>${items[i][2]}</p>`};$(bs).innerHTML=items.map((it,i)=>`<button data-i="${i}">${it[0]} ${it[1]}</button>`).join("");$(bs).onclick=e=>{const b=e.target.closest("button");if(b)set(+b.dataset.i)};set(init)}
+function chips(id,items,cur,fn){const draw=()=>{$(id).innerHTML=items.map((x,i)=>`<button data-i="${i}" class="${i==cur?"on":""}">${x}</button>`).join("")};$(id).onclick=e=>{const b=e.target.closest("button");if(b){cur=+b.dataset.i;draw();fn(cur)}};draw();fn(cur)}
+function mkList(id,items,bar,note,w){$(id).innerHTML=items.map(c=>`<label class="ck"><input type="checkbox"><span>${c}</span></label>`).join("");$(id).onchange=()=>{const n=document.querySelectorAll(id+" input:checked").length;$(bar).style.width=n*w+"%";$(note).textContent=n+" of "+items.length+(n==items.length?" · all done!":"")};$(id).onchange()}
+// hero
+const ST=[["📚","Documents","handbook.pdf · policy.txt"],["📥","Loading","load_document(uploaded_file) → raw text"],["🧹","Cleaning","clean_text(raw_text) → tidy text"],["✂️","Chunking","overlapping_chunks(text, 500, 100) → 42 chunks"],["🧭","Embeddings","get_embedding(chunk) → [0.02, -0.31, 0.77, …]"],["🗄️","Vector DB","collection.upsert(ids, documents, embeddings, metadatas)"],["❓","User question","\"How many vacation days do employees receive?\""],["🎯","Retrieve chunk","collection.query(...) → \"Employees receive 15 vacation days.\""],["🧩","Augmented prompt","Use only this context: … Question: …"],["✅","Grounded answer","\"Employees receive 15 vacation days.\" (source: handbook, p.4)"]];let iv;
+$("#h1").innerHTML=ST.slice(0,6).map((s,i)=>`<div class="stage" id="h${i}"><span class="ic">${s[0]}</span>${s[1]}</div>`).join("");$("#h2").innerHTML=ST.slice(6).map((s,i)=>`<div class="stage" id="h${i+6}"><span class="ic">${s[0]}</span>${s[1]}</div>`).join("");
+function hrun(){clearInterval(iv);let i=0;const f=()=>{document.querySelectorAll(".stage").forEach((e,k)=>e.classList.toggle("on",k==i));$("#hp").textContent="Now carrying → "+ST[i][2]};f();iv=setInterval(()=>{i++;f();if(i==9)clearInterval(iv)},1200)}
+$("#hr").onclick=hrun;hrun();
+// without/with
+const WR=[["Relies mainly on internal model knowledge","Uses retrieved source documents"],["May invent facts","Can be grounded in evidence"],["May be outdated","Can use newly uploaded documents"],["Harder to verify","Can return supporting chunks and citations"]];
+function drawW(m){document.querySelectorAll("#wb button").forEach((b,i)=>b.classList.toggle("on",i==m));$("#wd").innerHTML=`<div class="${m?"okb":"err"}"><b>Q:</b> What is the vacation policy?<br><b>A:</b> ${m?"Full-time employees receive 15 paid vacation days. <span class='mut'>(source: handbook, p.4)</span>":"Employees typically get 20 vacation days. <span class='mut'>(a confident guess, wrong for this company)</span>"}</div><table>${WR.map(r=>`<tr><td>${m?"✓":"✗"}</td><td>${r[m]}</td></tr>`).join("")}</table>`}
+$("#wb").onclick=e=>{if(e.target.dataset.m)drawW(+e.target.dataset.m)};drawW(0);
+stepper("#rb","#rd",[["🔎","Retrieval","Find the most relevant chunks for the question. Chunks become embeddings in a vector database, so the search works on meaning, not just exact keywords."],["➕","Augmentation","Add the retrieved text to the prompt, together with the question and an instruction like “Use the supplied context”."],["✍️","Generation","The LLM answers from the question, the context and the grounding instructions, so the response is built on supplied evidence."]],0);
+// mini rag
+const L="lrhmst",LX={};Object.entries({vacation:"l9",leave:"l9",days:"t4",remote:"r10",home:"r6",work:"r3",manager:"r2",approval:"r2",holidays:"h9",holiday:"h9",closed:"h3",office:"h2",statutory:"h6",salary:"m9",paid:"m6",pay:"m9",friday:"t2m2",passwords:"s9",password:"s9",hours:"t8"}).forEach(([k,s])=>{const v=Array(6).fill(0);s.replace(/([a-z])(\d+)/g,(m,l,n)=>{v[L.indexOf(l)]=n/10});LX[k]=v});
+const emb=t=>{const k=(t.toLowerCase().match(/[a-z]+/g)||[]).filter(w=>LX[w]),v=Array(6).fill(0);k.forEach(w=>LX[w].forEach((x,i)=>v[i]+=x/k.length));return v},mg=a=>Math.hypot(...a),cs=(a,b)=>mg(a)&&mg(b)?a.reduce((s,x,i)=>s+x*b[i],0)/(mg(a)*mg(b)):0;
+const DC=[["Employees receive 15 vacation days.",4],["Remote work requires manager approval.",7],["The office is closed on statutory holidays.",5],["Salary is paid on the last Friday of each month.",9],["Passwords must be changed every 90 days.",12],["Work hours are 9 to 5, Monday to Friday.",6]].map(d=>({t:d[0],p:d[1],v:emb(d[0])}));
+const MQ=["How many vacation days do employees receive?","Can I work from home?","When do I get paid?","Is the office open on holidays?","What is the CEO’s favorite color?"];
+$("#mq").innerHTML=MQ.map(q=>`<button data-q="${q}">${q}</button>`).join("");
+function ask(){const q=$("#qi").value.trim(),k=+$("#tk").value,rag=$("#ur").checked;$("#kv").textContent=k;if(!q){$("#m1").innerHTML=`<div class="inf">Ask a question.</div>`;$("#m2").textContent="";$("#m3").innerHTML="";return}
+const qv=emb(q),r=DC.map(d=>({d,s:cs(qv,d.v)})).sort((a,b)=>b.s-a.s).slice(0,k),good=r.filter(x=>x.s>.5);
+$("#m1").innerHTML=rag?r.map((x,i)=>`<div class="ch ${x.s>.5&&i==0?"top":""}"><small>similarity ${x.s.toFixed(2)} · p.${x.d.p}</small>${esc(x.d.t)}</div>`).join("")+(good.length?"":`<div class="inf">Nothing similar enough was found.</div>`):`<div class="inf">Retrieval is off. The model sees only your question.</div>`;
+const ctx=rag&&good.length?good.map(x=>"- "+x.d.t).join("\n"):"(no relevant context)";
+$("#m2").innerHTML=rag?`<span style="color:var(--o)">Use only this context. If the answer isn’t there, say you don’t know.</span>\n\n<span style="color:var(--t)">Context:\n${esc(ctx)}</span>\n\n<span style="color:var(--b)">Question:\n${esc(q)}</span>`:`<span style="color:var(--b)">${esc(q)}</span>`;
+$("#m3").innerHTML=!rag?`<div class="err">${/vacation/i.test(q)?"Employees typically get 20 vacation days.":"I can’t see your documents, so this would be a guess from general training data."}<br><small class="mut">No evidence to check: this is how unsupported guessing happens.</small></div>`:good.length?`<div class="okb">${esc(good[0].d.t)} <span class="mut">(source: handbook, p.${good[0].d.p})</span></div>`:`<div class="inf">I don’t have enough information in the supplied context to answer that.<br><small class="mut">A grounded model admits the gap instead of inventing an answer.</small></div>`}
+$("#mq").onclick=e=>{if(e.target.dataset.q){$("#qi").value=e.target.dataset.q;ask()}};$("#qb").onclick=ask;$("#qi").onkeydown=e=>{if(e.key=="Enter")ask()};$("#ur").onchange=ask;$("#tk").oninput=ask;$("#qi").value=MQ[0];ask();
+// upload
+const UF=[()=>`<div class="okb">✓ File uploaded successfully.<br><small>load_document → 1,240 characters of text</small></div>`,()=>`<div class="okb">✓ File uploaded successfully.<br><small>PDF text layer found: 18,730 characters across 12 pages</small></div>`,()=>`<div class="err">⚠ <b>No readable text found.</b> load_document returned an empty string (0 characters).<br>This PDF may contain scanned page images instead of selectable text.</div><div class="grid" style="margin-top:6px"><div class="inf">🔤 Use OCR</div><div class="inf">📄 Request a text-based version</div><div class="inf">🖼️ Use multimodal extraction</div><div class="inf">📢 Warn the user clearly</div></div>`];
+$("#ub").onclick=e=>{const b=e.target.closest("button");if(b)$("#ud").innerHTML=UF[+b.dataset.f]()};
+// cleaning
+const MESSY="ACME Corp Handbook\n\nThe policy applies to all\nfull-time employees.\n\n\n\n3\n\nACME Corp Handbook\nEmployees   receive\t15 paid vacation\u00a0days.\u0000\n\nPlan: Basic, $10 (valid 2025-01-31). Hours: 9-5.\n\n4\n";
+const CSTEP=[["Remove null characters",t=>t.replace(/\u0000/g,"")],["Replace non-breaking spaces",t=>t.replace(/\u00a0/g," ")],["Remove known header",t=>t.split("ACME Corp Handbook").join("")],["Remove page numbers",t=>t.split("\n").filter(l=>!/^\d+$/.test(l.trim())).join("\n")],["Collapse spaces and tabs",t=>t.replace(/[ \t]+/g," ")],["Repair mid-sentence line breaks",t=>t.replace(/(?<!\n)\n(?=[a-z])/g," ")],["Collapse blank lines and trim",t=>t.replace(/\n{3,}/g,"\n\n").trim()],["⚠ Over-clean: lowercase and strip punctuation",t=>t.toLowerCase().replace(/[^\w\s]/g,"")]];
+const vis=t=>esc(t).replace(/\u0000/g,"␀").replace(/\u00a0/g,"⍽").replace(/\t/g,"→").replace(/ /g,"·").replace(/\n/g,"↵\n");
+$("#cr").value=MESSY;$("#cs").innerHTML=CSTEP.map((s,i)=>`<label class="ck"><input type="checkbox" data-i="${i}" ${i<7?"checked":""}><span style="${i==7?"color:var(--p)":""}">${s[0]}</span></label>`).join("");
+function clean(){const raw=$("#cr").value;let t=raw;document.querySelectorAll("#cs input").forEach(c=>{if(c.checked)t=CSTEP[+c.dataset.i][1](t)});$("#co").innerHTML=vis(t);$("#cn").innerHTML=`<p class="mut">${raw.length} → <b>${t.length}</b> characters.</p>`+($("#cs input[data-i='7']").checked?`<div class="err">Look: <code>$10</code> became <code>10</code>, <code>2025-01-31</code> became <code>20250131</code>, and <code>9-5</code> became <code>95</code>. Meaning lost.</div>`:"")}
+$("#cr").oninput=clean;$("#cs").onchange=clean;clean();
+const TB=[`Plan Basic $10 5 GB\n(values are separated from their column names)`,`Plan: Basic\nPrice: $10\nStorage: 5 GB\n(each value keeps its label)`];
+chips("#tb",["Naive extraction","Labels preserved"],0,i=>$("#tt").textContent=TB[i]);
+// chunking
+const DOC="Vacation Policy\n\nFull-time employees receive 15 paid vacation days each year. Vacation requests should be submitted two weeks in advance. Unused days may be carried over for one year.\n\nRemote Work\n\nRemote work requires manager approval. Employees working from home must be online during core hours. Equipment is provided by the company.\n\nSecurity\n\nPasswords must be changed every 90 days. Never share your password with anyone. Report suspicious emails to IT immediately.";
+$("#ct").value=DOC;
+const SD=[["Fixed-size","Cuts every N characters, even mid-word. Simple, but boundaries are blind."],["Overlapping (sliding window)","Each chunk repeats the last few characters of the previous one so meaning near boundaries survives."],["Sentence-based","Groups whole sentences, so no sentence is cut in half."],["Recursive","Prefers natural boundaries in order: sections, paragraphs, newlines, sentences, words, characters, while capping length."],["Semantic (simulated)","Starts a new chunk when the topic changes. Real versions compare embeddings between sentences, which needs extra model calls."]];let sm=1;
+const TOP={vacation:/vacation|days|carried|requests/i,remote:/remote|home|equipment|online/i,security:/password|suspicious|emails|\bIT\b/i};
+function sents(t){return t.split(/(?<=[.!?])\s+|\n\n/).map(s=>s.trim()).filter(Boolean)}
+function rec(t,sz,seps){if(t.length<=sz)return[t];const s=seps[0];if(s===undefined){const o=[];for(let i=0;i<t.length;i+=sz)o.push(t.slice(i,i+sz));return o}const out=[];let cur="";for(const p of t.split(s)){const pc=cur?cur+s+p:p;if(pc.length<=sz)cur=pc;else{if(cur)out.push(cur);if(p.length>sz){out.push(...rec(p,sz,seps.slice(1)));cur=""}else cur=p}}if(cur)out.push(cur);return out}
+function chunk(t,m,sz,ov,per){let o=[];if(m<2){const st=m==1?Math.max(1,sz-Math.min(ov,sz-1)):sz;for(let i=0;i<t.length;i+=st){o.push({t:t.slice(i,i+sz),s:i});if(i+sz>=t.length)break}}
+else{let r;if(m==2){const s=sents(t);r=[];for(let i=0;i<s.length;i+=per)r.push(s.slice(i,i+per).join(" "))}else if(m==3)r=rec(t,sz,["\n\n","\n",". "," "]);else{const s=sents(t);r=[];let lab=null,cur=[];s.forEach(x=>{let l=Object.keys(TOP).find(k=>TOP[k].test(x))||lab;if(lab&&l!==lab&&cur.length){r.push(cur.join(" "));cur=[]}lab=l;cur.push(x)});if(cur.length)r.push(cur.join(" "))}
+let p=0;o=r.map(x=>{let i=t.indexOf(x.slice(0,25),p);if(i<0)i=p;p=i;return{t:x,s:i}})}return o}
+let CK=[],cm=0;const COL=["--b","--o","--t","--p"];
+function drawC(){const t=$("#ct").value,sz=+$("#zs").value,ov=+$("#os").value,per=+$("#ss").value;$("#zv").textContent=sz;$("#ov").textContent=ov;$("#sv").textContent=per;
+$("#ow").style.display=sm==1?"":"none";$("#sw").style.display=sm==2?"":"none";$("#sd").textContent=SD[sm][1];$("#zs").parentNode.style.display=sm==2||sm==4?"none":"";
+CK=chunk(t,sm,sz,ov,per);const n=Math.max(t.length,1);
+$("#rl").innerHTML=`<rect x="0" y="0" width="600" height="66" fill="var(--bg)" rx="8"/>`+CK.map((c,i)=>`<rect x="${c.s/n*600}" y="${4+(i%2)*30}" width="${Math.max(3,c.t.length/n*600)}" height="26" rx="5" fill="var(${COL[i%4]})" fill-opacity=".6" stroke="var(${COL[i%4]})"/><text x="${c.s/n*600+5}" y="${22+(i%2)*30}" style="font-size:11px;font-weight:700">${i+1}</text>`).join("");
+const len=CK.map(c=>c.t.length);$("#n1").textContent=CK.length;$("#n2").textContent=CK.length?Math.round(len.reduce((a,b)=>a+b,0)/CK.length):0;$("#n3").textContent=Math.max(0,...len);
+$("#cl").innerHTML=CK.slice(0,14).map((c,i)=>`<div class="ch ${i==cm?"top":""}" style="border-left:5px solid var(${COL[i%4]})"><small>Chunk ${i+1} · ${c.t.length} chars</small>${sm==1&&i>0?`<mark>${esc(c.t.slice(0,Math.min(ov,c.t.length)))}</mark>${esc(c.t.slice(Math.min(ov,c.t.length)))}`:esc(c.t)}</div>`).join("")+(CK.length>14?`<p class="mut">…and ${CK.length-14} more</p>`:"");
+drawT()}
+const TQ=[["How many vacation days?","15 paid vacation days"],["How often must passwords be changed?","every 90 days"],["Who approves remote work?","manager approval"]];let tq=0;
+function drawT(){const q=TQ[tq],w=q[0].toLowerCase().match(/[a-z]+/g).filter(x=>x.length>4&&!["often","which"].includes(x));
+const sc=CK.map(c=>w.filter(x=>c.t.toLowerCase().includes(x.slice(0,5))).length);let b=0;sc.forEach((s,i)=>{if(s>sc[b])b=i});cm=b;const ok=CK[b]&&CK[b].t.toLowerCase().replace(/\s+/g," ").includes(q[1]);
+$("#tr").innerHTML=CK.length?`<div class="${ok?"okb":"err"}">Best chunk: <b>#${b+1}</b> (${CK[b].t.length} chars). ${ok?`✓ It contains the whole answer: “${q[1]}”.`:`✗ The answer “${q[1]}” is cut off or missing. Try overlap or a larger chunk.`}</div>`:"";
+document.querySelectorAll("#cl .ch").forEach((e,i)=>e.classList.toggle("top",i==cm))}
+chips("#tq",TQ.map(x=>x[0]),0,i=>{tq=i;drawT()});chips("#sb",SD.map(x=>x[0]),1,i=>{sm=i;drawC()});["#ct","#zs","#os","#ss"].forEach(s=>$(s).oninput=drawC);drawC();
+// strategy guide
+const GS=[["Policies and manuals","Sections and paragraphs with overlap","Structure carries meaning; overlap protects rules that span boundaries."],["Legal documents","Section-aware chunks","Clauses refer to their section, so keep sections intact."],["FAQs","One Q&A pair per chunk","A question and its answer must stay together."],["Articles","Paragraph or sentence groups","Natural prose units keep ideas whole."],["Transcripts","Speaker or time-window chunks","Who said it and when often matters."],["Tables","Rows with column labels","A bare value means nothing without its label."]];
+chips("#gb",GS.map(x=>x[0]),0,i=>$("#gd").innerHTML=`<h3>${GS[i][1]}</h3><p>${GS[i][2]}</p>`);
+// metadata
+const MD=[["policy_001","Vacation Policy",4,"Full-time employees receive 15 paid vacation days each year."],["policy_002","Vacation Policy",4,"Vacation requests should be submitted two weeks in advance."],["policy_003","Remote Work",7,"Remote work requires manager approval."],["policy_004","Remote Work",7,"Equipment is provided by the company."],["policy_005","Security",12,"Passwords must be changed every 90 days."]];
+chips("#mf",["All","Vacation Policy","Remote Work","Security"],0,i=>{const s=["All","Vacation Policy","Remote Work","Security"][i],r=MD.filter(m=>i==0||m[1]==s);
+$("#mr").innerHTML=r.map(m=>`<div class="ch"><small>[employee_handbook.pdf · p.${m[2]} · ${m[1]}]</small>${esc(m[3])}</div>`).join("");const m=r[0];$("#mj").textContent=JSON.stringify({chunk_id:m[0],document:"employee_handbook.pdf",page:m[2],section:m[1],text:m[3]},null,2)});
+// final project
+const FP=[["app.py",`import streamlit as st\nfrom doc_helper import load_document, clean_text\n\nst.title("Historical Archivist Bot")\nst.caption("Upload historical documents and ask grounded questions.")\n\nuploaded_file = st.file_uploader(\n    "Upload a reference document",\n    type=["pdf", "txt"]\n)\n\nif uploaded_file:\n    raw_text = load_document(uploaded_file)\n    cleaned_text = clean_text(raw_text)\n    st.text_area("Cleaned Preview", cleaned_text[:3000], height=300)`,"The wireframe: title, caption and uploader, plus the cleaned preview. Retrieval and answering come next."],["doc_helper.py",`import re\nfrom pypdf import PdfReader\n\ndef load_document(uploaded_file):\n    if uploaded_file.name.lower().endswith(".pdf"):\n        reader = PdfReader(uploaded_file)\n        return "\\n".join(p.extract_text() or "" for p in reader.pages)\n    return uploaded_file.read().decode("utf-8")\n\ndef clean_text(text):\n    text = text.replace("\\x00", "")\n    text = text.replace("\\u00a0", " ")\n    text = re.sub(r"[ \\t]+", " ", text)\n    text = re.sub(r"(?<!\\n)\\n(?=[a-z])", " ", text)\n    text = re.sub(r"\\n{3,}", "\\n\\n", text)\n    return text.strip()`,"Reading and cleaning logic, separate from the interface. This loader is one possible version using the pypdf library; yours may differ."],["data/","document1.pdf\ndocument2.txt","Your 4–5 source documents."],["processed/","cleaned_document1.txt","Cleaned copies you can inspect."],["requirements.txt","streamlit\npypdf\nopenai\nchromadb","Packages to install (openai and chromadb are for the embedding steps)."],[".streamlit/secrets.toml","OPENAI_API_KEY = \"your_key_here\"","🚫 Keep this out of GitHub. Add it to .gitignore."]];
+chips("#fb",FP.map(x=>x[0]),0,i=>$("#fd").innerHTML=`<pre>${esc(FP[i][1])}</pre><p class="${i==5?"no":"mut"}">${FP[i][2]}</p>`);
+mkList("#cc",["I can define RAG.","I can explain retrieval, augmentation and generation.","I can upload documents with Streamlit.","I can clean extracted text.","I can recognize scanned PDFs and extraction failures.","I can compare fixed, overlapping, recursive and semantic chunking.","I can preserve chunk metadata.","I can prepare documents for a RAG pipeline."],"#cb","#cnt",12.5);
+</script>
+</body>
+</html>

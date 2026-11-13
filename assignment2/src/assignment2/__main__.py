@@ -1,0 +1,6 @@
+def main() -> None:
+    print("Hello from assignment2!")
+
+
+if __name__ == "__main__":
+    main()
